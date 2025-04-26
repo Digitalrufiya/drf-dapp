@@ -1,0 +1,9 @@
+npx create-next-app drf-token-sale-dapp
+cd drf-token-sale-dapp
+
+# Replace all files with the ones I sent
+# Install dependencies
+npm install ethers tailwindcss
+
+# Start the DApp
+npm run dev
