@@ -1,0 +1,17 @@
+{
+  "name": "drf-token-sale-dapp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "ethers": "^6.8.0",
+    "next": "14.0.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "tailwindcss": "^3.4.0"
+  }
+}
