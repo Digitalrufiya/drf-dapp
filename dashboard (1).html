@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Wallet Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body style="font-family: Arial, sans-serif; background: #f9f9f9; text-align: center;">
+  <div class="container">
+    <h1>DRF Wallet Dashboard</h1>
+    <p id="walletAddress">Wallet Address: </p>
+    <p id="drfBalance">DRF Balance: </p>
+    <p id="bnbBalance">BNB Balance: </p>
+
+    <button onclick="copyAddress()" style="margin: 10px;">Copy Wallet Address</button>
+    <button onclick="viewOnBscScan()" style="margin: 10px;">View on BscScan</button>
+  </div>
+
+  <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
+    <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
+    <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
+    <a href="swap.html"><img src="icon/swap.png" alt="Swap" width="24" /><br>Swap</a>
+    <a href="transactions.html"><img src="icon/transactions.png" alt="Transactions" width="24" /><br>Transactions</a>
+    <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script>
+    let provider, signer, walletAddress;
+
+    async function loadWallet() {
+      if (window.ethereum) {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        walletAddress = await signer.getAddress();
+        document.getElementById("walletAddress").innerText = "Wallet Address: " + walletAddress;
+        updateBalances();
+      } else {
+        alert("MetaMask not detected!");
+      }
+    }
+
+    async function updateBalances() {
+      const drfTokenAddress = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+      const drfAbi = ["function balanceOf(address owner) view returns (uint256)", "function decimals() view returns (uint8)", "function symbol() view returns (string)"];
+      const tokenContract = new ethers.Contract(drfTokenAddress, drfAbi, provider);
+      const balance = await tokenContract.balanceOf(walletAddress);
+      const decimals = await tokenContract.decimals();
+      const symbol = await tokenContract.symbol();
+      const formatted = ethers.utils.formatUnits(balance, decimals);
+      document.getElementById("drfBalance").innerText = `${symbol} Balance: ${formatted}`;
+
+      const bnbBalance = await provider.getBalance(walletAddress);
+      document.getElementById("bnbBalance").innerText = `BNB Balance: ${ethers.utils.formatEther(bnbBalance)}`;
+    }
+
+    function copyAddress() {
+      navigator.clipboard.writeText(walletAddress);
+      alert("Address copied to clipboard!");
+    }
+
+    function viewOnBscScan() {
+      window.open("https://bscscan.com/address/" + walletAddress, "_blank");
+    }
+
+    loadWallet();
+  </script>
+</body>
+</html>
