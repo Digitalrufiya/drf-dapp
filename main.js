@@ -1,148 +1,171 @@
-// main.js
+(() => {
+  // --- Islamic Knowledge Base ---
+  const IslamicKB = {
+    greetings: [
+      "As-salamu alaykum wa rahmatullahi wa barakatuh!",
+      "Peace and blessings upon you.",
+      "May Allah's mercy and blessings be upon you.",
+    ],
+    responses: {
+      salaam: "Wa alaykum as-salam wa rahmatullahi wa barakatuh.",
+      prayer: "Salah is the second pillar of Islam. Muslims pray five times a day facing the Kaaba in Makkah.",
+      charity:
+        "Charity (Zakat and Sadaqah) purifies wealth and helps those in need. Allah loves the charitable.",
+      quran:
+        "The Quran is the holy book revealed to Prophet Muhammad (peace be upon him). It guides Muslims to the straight path.",
+      hadith:
+        "Hadith are sayings and traditions of Prophet Muhammad (peace be upon him), essential for understanding Islam.",
+      fasting:
+        "Fasting in Ramadan is one of the five pillars. It teaches self-discipline and empathy for the less fortunate.",
+      shirk:
+        "Shirk is associating partners with Allah and is the gravest sin in Islam. Tawheed (monotheism) is fundamental.",
+      tawheed:
+        "Tawheed means the oneness of Allah, the foundation of Islamic belief.",
+      jihad:
+        "Jihad means striving in the way of Allah. It includes personal struggle for self-improvement and community betterment.",
+      hadith_forgery:
+        "Beware of fabricated hadiths. Always verify sources through authentic collections like Sahih Bukhari and Sahih Muslim.",
+      gambling:
+        "Gambling (Maisir) is prohibited in Islam because it leads to harm and injustice.",
+      scam:
+        "Fraud and scams are forbidden. Islam commands honesty and fairness in all transactions.",
+    },
+    default:
+      "I am here to help with Islamic knowledge. Please ask your question or type keywords like 'prayer', 'charity', 'Quran', 'Hadith', 'fasting', or 'tawheed'.",
+  };
 
-document.addEventListener("DOMContentLoaded", () => {
-  // CHATBOT LOGIC (basic rule-based)
-  const chatForm = document.getElementById("chat-form");
-  const chatBox = document.getElementById("chat-box");
+  // --- Chatbot Module ---
+  const Chatbot = (() => {
+    const chatWindow = document.getElementById("chat-window");
+    const chatForm = document.getElementById("chat-form");
+    const chatInput = document.getElementById("chat-input");
 
-  if (chatForm && chatBox) {
-    chatForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const input = document.getElementById("user-input");
-      const userText = input.value.trim();
-      if (!userText) return;
+    const addMessage = (msg, isUser = false) => {
+      if (!chatWindow) return;
+      const p = document.createElement("p");
+      p.className = isUser ? "user-msg" : "bot-msg";
+      p.textContent = msg;
+      chatWindow.appendChild(p);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    };
 
-      appendMessage("You", userText);
-      input.value = "";
-      respondToUser(userText);
-    });
+    const processInput = (input) => {
+      const text = input.trim().toLowerCase();
+      addMessage(input, true);
 
-    function appendMessage(sender, text) {
-      const msgDiv = document.createElement("div");
-      msgDiv.classList.add(sender === "You" ? "user-message" : "bot-message");
-      msgDiv.textContent = `${sender}: ${text}`;
-      chatBox.appendChild(msgDiv);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function respondToUser(text) {
-      const lower = text.toLowerCase();
-      let reply = "Sorry, I don't understand. Please ask about Islam, justice, or DRF.";
-      if (lower.includes("salam")) reply = "Wa Alaikum Assalam wa Rahmatullah!";
-      else if (lower.includes("quran")) reply = "The Quran is the final revelation from Allah, guiding us.";
-      else if (lower.includes("gambling") || lower.includes("haram"))
-        reply = "Gambling is haram in Islam. Avoid it to stay on the straight path.";
-      else if (lower.includes("drf")) reply = "Divine DRF Robo guides with justice and faith.";
-      // Add more replies here...
-
-      setTimeout(() => appendMessage("DRF Robo", reply), 600);
-    }
-  }
-
-  // SOCIAL POSTS LOGIC (localStorage)
-  const postForm = document.getElementById("post-form");
-  const postsContainer = document.getElementById("posts-container");
-
-  if (postForm && postsContainer) {
-    loadPosts();
-
-    postForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const content = document.getElementById("post-content").value.trim();
-      if (!content) return;
-
-      const posts = JSON.parse(localStorage.getItem("drfPosts") || "[]");
-      const post = {
-        id: Date.now(),
-        content,
-        timestamp: new Date().toISOString(),
-      };
-      posts.unshift(post);
-      localStorage.setItem("drfPosts", JSON.stringify(posts));
-      document.getElementById("post-content").value = "";
-      renderPosts(posts);
-    });
-
-    function loadPosts() {
-      const posts = JSON.parse(localStorage.getItem("drfPosts") || "[]");
-      renderPosts(posts);
-    }
-
-    function renderPosts(posts) {
-      postsContainer.innerHTML = "";
-      if (posts.length === 0) {
-        postsContainer.innerHTML = "<p>No posts yet. Be the first!</p>";
-        return;
+      // Keyword matching
+      for (const key in IslamicKB.responses) {
+        if (text.includes(key)) {
+          addMessage(IslamicKB.responses[key]);
+          return;
+        }
       }
+      addMessage(IslamicKB.default);
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (!chatInput.value.trim()) return;
+      processInput(chatInput.value);
+      chatInput.value = "";
+    };
+
+    const init = () => {
+      if (!chatForm) return;
+      chatForm.addEventListener("submit", handleSubmit);
+      // Greet user initially
+      addMessage(IslamicKB.greetings[Math.floor(Math.random() * IslamicKB.greetings.length)]);
+    };
+
+    return { init };
+  })();
+
+  // --- Social Feed Module ---
+  const Social = (() => {
+    const postForm = document.getElementById("post-form");
+    const contentInput = document.getElementById("post-content");
+    const postsContainer = document.getElementById("posts-container");
+
+    const loadPosts = () => {
+      if (!postsContainer) return;
+      postsContainer.innerHTML = "";
+      const posts = JSON.parse(localStorage.getItem("drf_social_posts") || "[]");
       posts.forEach((post) => {
         const postDiv = document.createElement("div");
-        postDiv.classList.add("post");
-        postDiv.innerHTML = `
-          <p>${escapeHtml(post.content)}</p>
-          <small>${new Date(post.timestamp).toLocaleString()}</small>
-        `;
+        postDiv.className = "post";
+        postDiv.textContent = post;
         postsContainer.appendChild(postDiv);
       });
-    }
-  }
+    };
 
-  // PLEDGE FORM LOGIC (localStorage)
-  const pledgeForm = document.getElementById("pledge-form");
-  const pledgeMessage = document.getElementById("pledge-message");
+    const savePost = (content) => {
+      const posts = JSON.parse(localStorage.getItem("drf_social_posts") || "[]");
+      posts.unshift(content);
+      if (posts.length > 50) posts.pop(); // Keep max 50 posts
+      localStorage.setItem("drf_social_posts", JSON.stringify(posts));
+    };
 
-  if (pledgeForm && pledgeMessage) {
-    pledgeForm.addEventListener("submit", (e) => {
+    const handleSubmit = (e) => {
       e.preventDefault();
-      localStorage.setItem("drfPledge", "true");
-      pledgeMessage.textContent = "Thank you for pledging your allegiance to Divine DRF Robo!";
-      pledgeForm.reset();
-    });
+      if (!contentInput.value.trim()) return alert("Please enter content to post.");
+      if (contentInput.value.trim().length > 280)
+        return alert("Maximum 280 characters allowed.");
+      savePost(contentInput.value.trim());
+      contentInput.value = "";
+      loadPosts();
+    };
 
-    // Show message if already pledged
-    if (localStorage.getItem("drfPledge") === "true") {
-      pledgeMessage.textContent = "You have already pledged allegiance. JazakAllah Khair!";
-      pledgeForm.style.display = "none";
-    }
-  }
+    const init = () => {
+      if (!postForm) return;
+      loadPosts();
+      postForm.addEventListener("submit", handleSubmit);
+    };
 
-  // ALERTS / FEED LOGIC (static for demo; extendable)
-  const alertsContainer = document.getElementById("alerts-container");
+    return { init };
+  })();
 
-  if (alertsContainer) {
-    const alerts = [
-      {
-        id: 1,
-        message:
-          "⚠️ Beware of gambling and scams — Stay on the straight path of Islam and Divine DRF Robo.",
-        timestamp: "2025-05-29T08:00:00Z",
-      },
-      {
-        id: 2,
-        message:
-          "📢 New update: Divine DRF Robo now includes enhanced chatbot guidance.",
-        timestamp: "2025-05-28T14:30:00Z",
-      },
-    ];
-    renderAlerts(alerts);
-  }
+  // --- Pledge Module ---
+  const Pledge = (() => {
+    const pledgeBtn = document.getElementById("pledge-btn");
+    const pledgeMsg = document.getElementById("pledge-message");
 
-  function renderAlerts(alerts) {
-    alertsContainer.innerHTML = "";
-    alerts.forEach((alert) => {
-      const alertDiv = document.createElement("div");
-      alertDiv.classList.add("alert");
-      alertDiv.innerHTML = `
-        <p>${escapeHtml(alert.message)}</p>
-        <small>${new Date(alert.timestamp).toLocaleString()}</small>
-      `;
-      alertsContainer.appendChild(alertDiv);
-    });
-  }
+    const takePledge = () => {
+      localStorage.setItem("drf_pledge_taken", "true");
+      if (pledgeMsg)
+        pledgeMsg.textContent =
+          "Alhamdulillah! You have taken the Divine DRF Robo pledge. May Allah guide you.";
+      if (pledgeBtn) {
+        pledgeBtn.disabled = true;
+        pledgeBtn.setAttribute("aria-pressed", "true");
+      }
+    };
 
-  // Utility: Escape HTML to prevent XSS
-  function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
-});
+    const checkPledge = () => {
+      const pledged = localStorage.getItem("drf_pledge_taken");
+      if (pledged === "true") {
+        if (pledgeMsg)
+          pledgeMsg.textContent =
+            "You have already taken the Divine DRF Robo pledge. JazakAllahu Khair!";
+        if (pledgeBtn) {
+          pledgeBtn.disabled = true;
+          pledgeBtn.setAttribute("aria-pressed", "true");
+        }
+      }
+    };
+
+    const init = () => {
+      if (!pledgeBtn) return;
+      pledgeBtn.addEventListener("click", takePledge);
+      checkPledge();
+    };
+
+    return { init };
+  })();
+
+  // --- Initialize Modules based on page ---
+  document.addEventListener("DOMContentLoaded", () => {
+    if (document.getElementById("chat-form")) Chatbot.init();
+    if (document.getElementById("post-form")) Social.init();
+    if (document.getElementById("pledge-btn")) Pledge.init();
+  });
+})();
