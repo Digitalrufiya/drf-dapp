@@ -1,4 +1,4 @@
-// Make sure drfSdk.js is loaded before this
+// Make sure drf-sdk.js is loaded before this
 
 const loginForm = document.getElementById('login-form');
 const loginError = document.getElementById('login-error');
@@ -26,10 +26,11 @@ function showError(elem, message) {
 
 async function loadTimeline() {
   try {
+    // Fetch timeline posts from SDK (which internally calls your backend)
     const data = await DRF_SDK.getTimeline();
     timelineDiv.innerHTML = '';
 
-    if (data.posts.length === 0) {
+    if (!data.posts || data.posts.length === 0) {
       timelineDiv.innerHTML = '<p>No posts yet.</p>';
       return;
     }
@@ -42,12 +43,12 @@ async function loadTimeline() {
           <strong>${post.userEmail}</strong> - ${formatDate(post.timestamp)}
         </div>
         <div class="text">${post.text ? post.text : ''}</div>
-        ${post.fileCid ? `<div><a href="https://ipfs.io/ipfs/${post.fileCid}" target="_blank">📎 View File</a></div>` : ''}
+        ${post.fileCid ? `<div><a href="https://ipfs.io/ipfs/${post.fileCid}" target="_blank" rel="noopener noreferrer">📎 View File</a></div>` : ''}
       `;
       timelineDiv.appendChild(postEl);
     });
   } catch (e) {
-    showError(postError, e.message);
+    showError(postError, e.message || 'Failed to load timeline');
   }
 }
 
@@ -59,17 +60,22 @@ loginForm.addEventListener('submit', async e => {
   const password = loginForm.password.value.trim();
 
   try {
+    // Use SDK to login (gets JWT token and sets session)
     await DRF_SDK.login(email, password);
+
+    // On successful login, show dashboard and load timeline
     loginSection.style.display = 'none';
     dashboard.style.display = 'block';
     loadTimeline();
   } catch (err) {
-    showError(loginError, err.message);
+    showError(loginError, err.message || 'Login failed');
   }
 });
 
 logoutBtn.addEventListener('click', () => {
+  // Call SDK logout (clear tokens, session)
   DRF_SDK.logout();
+
   dashboard.style.display = 'none';
   loginSection.style.display = 'block';
   timelineDiv.innerHTML = '';
@@ -85,6 +91,8 @@ postForm.addEventListener('submit', async e => {
 
   try {
     let cid = null;
+
+    // If file uploaded, use SDK to upload and get CID
     if (postFile.files.length > 0) {
       const uploadRes = await DRF_SDK.uploadFile(postFile.files[0]);
       cid = uploadRes.cid;
@@ -95,13 +103,16 @@ postForm.addEventListener('submit', async e => {
       return;
     }
 
+    // Create post via SDK (which sends to backend)
     await DRF_SDK.createPost(text, cid);
 
+    // Reset form inputs
     postText.value = '';
     postFile.value = '';
 
+    // Reload timeline to show new post
     loadTimeline();
   } catch (err) {
-    showError(postError, err.message);
+    showError(postError, err.message || 'Failed to create post');
   }
 });
