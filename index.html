@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Posts with SDK</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>DRF Robo Posts</h1>
+
+    <div id="login-section">
+      <h2>Login</h2>
+      <form id="login-form">
+        <input type="email" id="email" placeholder="Email" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <button type="submit">Login</button>
+      </form>
+      <div id="login-error" class="error"></div>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+      <button id="logout-btn">Logout</button>
+
+      <h2>Create Post</h2>
+      <form id="post-form">
+        <textarea id="post-text" placeholder="Write something..." rows="3"></textarea>
+        <input type="file" id="post-file" />
+        <button type="submit">Post</button>
+      </form>
+      <div id="post-error" class="error"></div>
+
+      <h2>Timeline</h2>
+      <div id="timeline"></div>
+    </div>
+  </div>
+
+  <script src="drfSdk.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
