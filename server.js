@@ -8,7 +8,7 @@ import { create } from 'ipfs-http-client';
 const app = express();
 const PORT = 4000;
 const JWT_SECRET = 'your_super_secret_jwt_key';
-const IPFS_API = 'http://localhost:5001'; // your IPFS node
+const IPFS_API = 'http://localhost:5001'; // make sure your IPFS node is running
 
 const ipfs = create(IPFS_API);
 const upload = multer({ storage: multer.memoryStorage() });
