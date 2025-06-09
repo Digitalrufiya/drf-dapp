@@ -1,28 +1,36 @@
-// routes/auth.js
-import express from 'express';
+// auth.js
 import jwt from 'jsonwebtoken';
+import express from 'express';
 
 const router = express.Router();
 
-const SECRET_KEY = 'your_super_secret_key'; // Replace with env var in production
+const ADMIN_EMAIL = 'digitalrufiya@gmail.com';
+const ADMIN_PASSWORD = 'Zivian91000@2020';
+const SECRET_KEY = 'your_jwt_secret_key'; // Change this and keep it safe
 
-// TEMP: Hardcoded admin user (store in DB later)
-const adminUser = {
-  email: 'digitalrufiya@gmail.com',
-  password: 'Zivian91000@2020',
-  role: 'admin'
-};
-
-// POST /api/login
+// Login route
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
 
-  if (email === adminUser.email && password === adminUser.password) {
-    const token = jwt.sign({ email: adminUser.email, role: adminUser.role }, SECRET_KEY, { expiresIn: '1h' });
-    return res.json({ token });
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    const token = jwt.sign({ email }, SECRET_KEY, { expiresIn: '1h' });
+    return res.json({ success: true, token });
   }
 
-  return res.status(401).json({ error: 'Invalid credentials' });
+  return res.status(401).json({ success: false, message: 'Invalid credentials' });
 });
+
+// Middleware to protect routes
+export function verifyToken(req, res, next) {
+  const token = req.headers['authorization'];
+
+  if (!token) return res.status(403).json({ message: 'No token provided' });
+
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+    req.user = decoded;
+    next();
+  });
+}
 
 export default router;
