@@ -28,3 +28,6 @@ const DRF_SDK = {
     return true;
   }
 };
+
+// ✅ Make globally accessible
+window.DRF_SDK = DRF_SDK;
