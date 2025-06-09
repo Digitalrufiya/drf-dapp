@@ -1,24 +1,38 @@
-import MyCDNSDK from './my-cdn-sdk.js';
-
-const cdn = new MyCDNSDK({
-  apiUrl: 'http://localhost:4000/api',
-  token: 'your-jwt-token',
-});
-
-// Upload file with metadata and progress callback
-const fileInput = document.querySelector('#fileInput');
-fileInput.onchange = async () => {
-  const file = fileInput.files[0];
-  try {
-    const cid = await cdn.uploadFileWithProgress(file, { description: 'My file' }, (percent) => {
-      console.log(`Upload progress: ${percent.toFixed(2)}%`);
-    });
-    console.log('Uploaded file CID:', cid);
-
-    // Get signed URL to share
-    const signedUrl = await cdn.getSignedUrl(cid, 3600);
-    console.log('Signed URL:', signedUrl);
-  } catch (err) {
-    console.error(err);
+// drfrobo-sdk.js
+export default class DRFRoboSDK {
+  constructor({ apiUrl, token }) {
+    this.apiUrl = apiUrl;
+    this.token = token;
   }
-};
+
+  async login(email, password) {
+    const res = await fetch(`${this.apiUrl}/login`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) throw new Error('Login failed');
+    const data = await res.json();
+    this.token = data.token;
+    return data;
+  }
+
+  async uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${this.apiUrl}/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+    return data.cid;
+  }
+
+  async getFile(cid) {
+    const res = await fetch(`${this.apiUrl}/file/${cid}`);
+    if (!res.ok) throw new Error('File not found');
+    return await res.blob();
+  }
+}
