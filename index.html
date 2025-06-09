@@ -1,44 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>DRF Robo CDN Demo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Robo Social</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+    input, button, textarea { width: 100%; margin: 5px 0; padding: 10px; }
+    #timeline { margin-top: 20px; }
+    .post { border-bottom: 1px solid #ddd; padding: 10px 0; }
+    .post img, .post video { max-width: 100%; height: auto; }
+  </style>
 </head>
 <body>
-  <h2>DRF Robo CDN Demo</h2>
-  <input type="email" id="email" placeholder="Email"/>
-  <input type="password" id="password" placeholder="Password"/>
-  <button id="loginBtn">Login</button>
-  <br/><br/>
-  <input type="file" id="fileInput" />
-  <button id="uploadBtn" disabled>Upload</button>
 
-  <script type="module">
-    import DRFRoboSDK from './drfrobo-sdk.js';
+<h2>DRF Robo Social Media</h2>
 
-    const sdk = new DRFRoboSDK({ apiUrl: 'http://localhost:4000' });
+<div id="login-section">
+  <h3>Login</h3>
+  <input id="email" type="email" placeholder="Email" />
+  <input id="password" type="password" placeholder="Password" />
+  <button id="login-btn">Login</button>
+  <div id="login-msg"></div>
+</div>
 
-    document.getElementById('loginBtn').onclick = async () => {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      try {
-        await sdk.login(email, password);
-        alert('Logged in!');
-        document.getElementById('uploadBtn').disabled = false;
-      } catch(e) {
-        alert('Login failed');
+<div id="post-section" style="display:none;">
+  <h3>Create Post</h3>
+  <textarea id="post-text" placeholder="Write something..."></textarea>
+  <input id="post-file" type="file" accept="image/*,video/*" />
+  <button id="post-btn">Post</button>
+  <div id="post-msg"></div>
+
+  <h3>Timeline</h3>
+  <div id="timeline"></div>
+</div>
+
+<script type="module">
+  import { DRFRoboSDK } from './drf-robo-sdk.js';
+
+  const sdk = new DRFRoboSDK('http://localhost:4000'); // Change to your backend URL
+
+  const loginSection = document.getElementById('login-section');
+  const postSection = document.getElementById('post-section');
+  const loginBtn = document.getElementById('login-btn');
+  const loginMsg = document.getElementById('login-msg');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+
+  const postBtn = document.getElementById('post-btn');
+  const postText = document.getElementById('post-text');
+  const postFile = document.getElementById('post-file');
+  const postMsg = document.getElementById('post-msg');
+  const timelineDiv = document.getElementById('timeline');
+
+  loginBtn.onclick = async () => {
+    loginMsg.textContent = 'Logging in...';
+    try {
+      await sdk.login(emailInput.value, passwordInput.value);
+      loginMsg.textContent = 'Login successful!';
+      loginSection.style.display = 'none';
+      postSection.style.display = 'block';
+      loadTimeline();
+    } catch (err) {
+      loginMsg.textContent = 'Login failed: ' + err.message;
+    }
+  };
+
+  postBtn.onclick = async () => {
+    postMsg.textContent = 'Posting...';
+    try {
+      let cid = null;
+      if (postFile.files.length > 0) {
+        const uploadResult = await sdk.uploadFile(postFile.files[0]);
+        cid = uploadResult.cid;
       }
-    };
+      const res = await sdk.createPost(postText.value, cid);
+      postMsg.textContent = 'Post created!';
+      postText.value = '';
+      postFile.value = '';
+      loadTimeline();
+    } catch (err) {
+      postMsg.textContent = 'Failed to create post: ' + err.message;
+    }
+  };
 
-    document.getElementById('uploadBtn').onclick = async () => {
-      const file = document.getElementById('fileInput').files[0];
-      if (!file) return alert('Pick a file first');
-      try {
-        const cid = await sdk.uploadFile(file);
-        alert('Uploaded! CID: ' + cid);
-      } catch(e) {
-        alert('Upload failed');
+  async function loadTimeline() {
+    timelineDiv.innerHTML = 'Loading timeline...';
+    try {
+      const data = await sdk.fetchTimeline(1, 20);
+      if (data.posts.length === 0) timelineDiv.innerHTML = 'No posts yet.';
+      else {
+        timelineDiv.innerHTML = '';
+        data.posts.forEach(post => {
+          const div = document.createElement('div');
+          div.className = 'post';
+          div.innerHTML = `
+            <p><b>${post.userEmail}</b> - ${new Date(post.timestamp).toLocaleString()}</p>
+            <p>${post.text || ''}</p>
+            ${post.fileCid ? renderMedia(post.fileCid) : ''}
+          `;
+          timelineDiv.appendChild(div);
+        });
       }
-    };
-  </script>
+    } catch (err) {
+      timelineDiv.innerHTML = 'Failed to load timeline: ' + err.message;
+    }
+  }
+
+  function renderMedia(cid) {
+    const url = `https://ipfs.io/ipfs/${cid}`;
+    // Simple check: image or video by extension (optional)
+    if (cid.match(/\.(mp4|webm)$/i)) {
+      return `<video controls src="${url}"></video>`;
+    }
+    return `<img src="${url}" alt="Media" />`;
+  }
+</script>
+
 </body>
 </html>
