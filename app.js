@@ -1,3 +1,6 @@
+// Assume currentUserEmail is stored on login success
+let currentUserEmail = null;
+
 const loginForm = document.getElementById('login-form');
 const loginError = document.getElementById('login-error');
 const loginSection = document.getElementById('login-section');
@@ -12,8 +15,6 @@ const postError = document.getElementById('post-error');
 
 const timelineDiv = document.getElementById('timeline');
 
-const MAX_FILE_SIZE_MB = 100;
-
 function formatDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleString();
@@ -24,8 +25,13 @@ function showError(elem, message) {
   setTimeout(() => (elem.textContent = ''), 5000);
 }
 
-function isVideoFile(filename) {
-  return /\.(mp4|webm|ogg)$/i.test(filename);
+function showToast(message) {
+  // Simple toast implementation
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
 async function loadTimeline() {
@@ -41,23 +47,40 @@ async function loadTimeline() {
     data.posts.forEach(post => {
       const postEl = document.createElement('div');
       postEl.classList.add('post');
-
-      let mediaHtml = '';
-      if (post.fileCid) {
-        if (isVideoFile(post.fileCid)) {
-          mediaHtml = `<video controls src="https://ipfs.io/ipfs/${post.fileCid}" style="max-width: 100%; border-radius: 8px;"></video>`;
-        } else {
-          mediaHtml = `<img src="https://ipfs.io/ipfs/${post.fileCid}" alt="Post media" style="max-width: 100%; border-radius: 8px;" />`;
-        }
-      }
-
       postEl.innerHTML = `
         <div class="meta">
           <strong>${post.userEmail}</strong> - ${formatDate(post.timestamp)}
         </div>
         <div class="text">${post.text ? post.text : ''}</div>
-        <div>${mediaHtml}</div>
+        ${post.fileCid ? `<div><a href="https://ipfs.io/ipfs/${post.fileCid}" target="_blank">📎 View File</a></div>` : ''}
+        <div class="actions">
+          <button class="share-btn">Share</button>
+          <button class="like-btn">Like</button>
+          <button class="comment-btn">Comment</button>
+        </div>
+        <div class="comments-section" style="display:none;">
+          <input type="text" class="comment-input" placeholder="Write a comment..." />
+          <button class="submit-comment-btn">Submit</button>
+          <div class="comments-list"></div>
+        </div>
       `;
+
+      // Event listeners for actions:
+      const shareBtn = postEl.querySelector('.share-btn');
+      shareBtn.addEventListener('click', () => handleShare(post));
+
+      const likeBtn = postEl.querySelector('.like-btn');
+      likeBtn.addEventListener('click', () => handleLike(post));
+
+      const commentBtn = postEl.querySelector('.comment-btn');
+      const commentsSection = postEl.querySelector('.comments-section');
+      commentBtn.addEventListener('click', () => {
+        commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
+      });
+
+      const submitCommentBtn = postEl.querySelector('.submit-comment-btn');
+      submitCommentBtn.addEventListener('click', () => handleComment(post, postEl));
+
       timelineDiv.appendChild(postEl);
     });
   } catch (e) {
@@ -74,6 +97,7 @@ loginForm.addEventListener('submit', async e => {
 
   try {
     await DRF_SDK.login(email, password);
+    currentUserEmail = email; // Save logged-in user email
     loginSection.style.display = 'none';
     dashboard.style.display = 'block';
     loadTimeline();
@@ -84,12 +108,12 @@ loginForm.addEventListener('submit', async e => {
 
 logoutBtn.addEventListener('click', () => {
   DRF_SDK.logout();
+  currentUserEmail = null;
   dashboard.style.display = 'none';
   loginSection.style.display = 'block';
   timelineDiv.innerHTML = '';
   postText.value = '';
   postFile.value = '';
-  postError.textContent = '';
 });
 
 postForm.addEventListener('submit', async e => {
@@ -97,20 +121,6 @@ postForm.addEventListener('submit', async e => {
   postError.textContent = '';
 
   const text = postText.value.trim();
-
-  // Check file size if file is selected
-  if (postFile.files.length > 0) {
-    const file = postFile.files[0];
-    const fileSizeMB = file.size / (1024 * 1024);
-    if (fileSizeMB > MAX_FILE_SIZE_MB) {
-      showError(postError, `File size exceeds ${MAX_FILE_SIZE_MB} MB limit.`);
-      return;
-    }
-  }
-
-  // Disable form elements while uploading/posting
-  postForm.querySelector('button[type="submit"]').disabled = true;
-  postForm.querySelector('button[type="submit"]').textContent = 'Posting...';
 
   try {
     let cid = null;
@@ -121,23 +131,74 @@ postForm.addEventListener('submit', async e => {
 
     if (!text && !cid) {
       showError(postError, 'Please enter text or upload a file');
-      postForm.querySelector('button[type="submit"]').disabled = false;
-      postForm.querySelector('button[type="submit"]').textContent = 'Post';
       return;
     }
 
     await DRF_SDK.createPost(text, cid);
 
-    // Clear inputs
+    // Reward the user for posting
+    await DRF_SDK.rewardUserForPost(currentUserEmail);
+    showToast("🎉 You earned tokens for posting!");
+
     postText.value = '';
     postFile.value = '';
 
-    // Reload timeline after posting
-    await loadTimeline();
+    loadTimeline();
   } catch (err) {
     showError(postError, err.message);
-  } finally {
-    postForm.querySelector('button[type="submit"]').disabled = false;
-    postForm.querySelector('button[type="submit"]').textContent = 'Post';
   }
 });
+
+// Handle sharing (within platform or external)
+async function handleShare(post) {
+  try {
+    // Simulate share action; in real app you’d trigger actual share UI
+    alert(`Sharing post by ${post.userEmail}`);
+
+    // Reward sharer
+    await DRF_SDK.rewardUserForShare(currentUserEmail);
+    showToast("🎉 You earned tokens for sharing!");
+  } catch (err) {
+    showError(postError, err.message);
+  }
+}
+
+// Handle liking a post (burn tokens)
+async function handleLike(post) {
+  try {
+    // Here you might update UI to show liked state
+    await DRF_SDK.burnTokensForLike(currentUserEmail);
+    showToast("🔥 Tokens burned for liking a post");
+  } catch (err) {
+    showError(postError, err.message);
+  }
+}
+
+// Handle commenting (burn tokens)
+async function handleComment(post, postEl) {
+  const commentInput = postEl.querySelector('.comment-input');
+  const commentText = commentInput.value.trim();
+
+  if (!commentText) {
+    showError(postError, 'Comment cannot be empty');
+    return;
+  }
+
+  try {
+    // Create comment post (if your backend supports it)
+    // await DRF_SDK.createComment(post.id, currentUserEmail, commentText);
+
+    // For now, just show comment in UI
+    const commentsList = postEl.querySelector('.comments-list');
+    const commentEl = document.createElement('div');
+    commentEl.textContent = `${currentUserEmail}: ${commentText}`;
+    commentsList.appendChild(commentEl);
+
+    commentInput.value = '';
+
+    await DRF_SDK.burnTokensForComment(currentUserEmail);
+    showToast("🔥 Tokens burned for commenting");
+  } catch (err) {
+    showError(postError, err.message);
+  }
+}
