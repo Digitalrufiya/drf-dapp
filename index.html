@@ -1,242 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Robo - IPFS CDN Frontend</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      background: #f0f4f8;
-      color: #333;
-    }
-    h1 {
-      text-align: center;
-      color: #1a73e8;
-    }
-    input, button {
-      padding: 0.6rem;
-      margin: 0.5rem 0;
-      font-size: 1rem;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    button {
-      background-color: #1a73e8;
-      border: none;
-      color: white;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    button:disabled {
-      background-color: #a0b4db;
-      cursor: not-allowed;
-    }
-    .progress-bar {
-      background-color: #ddd;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-top: 0.5rem;
-    }
-    .progress-bar > div {
-      height: 12px;
-      background-color: #1a73e8;
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-    .output {
-      margin-top: 1rem;
-      background: white;
-      padding: 1rem;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(26,115,232,0.3);
-      word-wrap: break-word;
-    }
-    label {
-      font-weight: bold;
-    }
-  </style>
-</head>
+<html>
+<head><title>DRF Robo Demo</title></head>
 <body>
-  <h1>DRF Robo - IPFS CDN</h1>
+  <input type="email" id="email" placeholder="Email"/>
+  <input type="password" id="password" placeholder="Password"/>
+  <button id="loginBtn">Login</button>
+  <br/><br/>
+  <input type="file" id="fileInput" />
+  <button id="uploadBtn" disabled>Upload</button>
 
-  <section id="login-section">
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email" required />
-    <input type="password" id="password" placeholder="Password" required />
-    <button id="loginBtn">Login</button>
-    <div id="loginMsg" style="color:red;"></div>
-  </section>
+  <script type="module">
+    import DRFRoboSDK from './drfrobo-sdk.js';
 
-  <section id="upload-section" style="display:none;">
-    <h2>Upload File</h2>
-    <input type="file" id="fileInput" />
-    <textarea id="metadata" placeholder='Metadata JSON (optional)' rows="3" style="width:100%;"></textarea>
-    <button id="uploadBtn" disabled>Upload</button>
-    <div class="progress-bar"><div id="progressBar"></div></div>
-    <div class="output" id="uploadOutput"></div>
-  </section>
+    const sdk = new DRFRoboSDK({ apiUrl: 'http://localhost:4000' });
 
-  <section id="signed-url-section" style="display:none;">
-    <h2>Get Signed URL</h2>
-    <input type="text" id="cidInput" placeholder="Enter CID here" />
-    <button id="getUrlBtn">Get Signed URL</button>
-    <div class="output" id="signedUrlOutput"></div>
-  </section>
-
-<script>
-  const API_URL = 'http://localhost:4000/api'; // Update if your backend is elsewhere
-
-  let token = null;
-
-  const loginSection = document.getElementById('login-section');
-  const uploadSection = document.getElementById('upload-section');
-  const signedUrlSection = document.getElementById('signed-url-section');
-
-  const loginBtn = document.getElementById('loginBtn');
-  const loginMsg = document.getElementById('loginMsg');
-
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-
-  const fileInput = document.getElementById('fileInput');
-  const metadataInput = document.getElementById('metadata');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const progressBar = document.getElementById('progressBar');
-  const uploadOutput = document.getElementById('uploadOutput');
-
-  const cidInput = document.getElementById('cidInput');
-  const getUrlBtn = document.getElementById('getUrlBtn');
-  const signedUrlOutput = document.getElementById('signedUrlOutput');
-
-  loginBtn.onclick = async () => {
-    loginMsg.textContent = '';
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-
-    if (!email || !password) {
-      loginMsg.textContent = 'Email and password required';
-      return;
-    }
-
-    loginBtn.disabled = true;
-    try {
-      const res = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || 'Login failed');
-
-      token = data.token;
-      loginSection.style.display = 'none';
-      uploadSection.style.display = 'block';
-      signedUrlSection.style.display = 'block';
-      uploadBtn.disabled = false;
-    } catch (err) {
-      loginMsg.textContent = err.message;
-    } finally {
-      loginBtn.disabled = false;
-    }
-  };
-
-  uploadBtn.onclick = async () => {
-    if (!fileInput.files.length) {
-      uploadOutput.textContent = 'Please select a file first.';
-      return;
-    }
-
-    let metadata = {};
-    if (metadataInput.value.trim()) {
+    document.getElementById('loginBtn').onclick = async () => {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
       try {
-        metadata = JSON.parse(metadataInput.value);
-      } catch {
-        uploadOutput.textContent = 'Invalid JSON in metadata.';
-        return;
+        await sdk.login(email, password);
+        alert('Logged in!');
+        document.getElementById('uploadBtn').disabled = false;
+      } catch(e) {
+        alert('Login failed');
       }
-    }
+    };
 
-    uploadBtn.disabled = true;
-    uploadOutput.textContent = '';
-    progressBar.style.width = '0%';
-
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('metadata', JSON.stringify(metadata));
-
-    try {
-      // Since fetch doesn't support progress for uploads, use XMLHttpRequest
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${API_URL}/upload`);
-        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const percent = (e.loaded / e.total) * 100;
-            progressBar.style.width = percent + '%';
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const resp = JSON.parse(xhr.responseText);
-            uploadOutput.textContent = `Upload successful! CID: ${resp.cid}`;
-            cidInput.value = resp.cid;
-            resolve();
-          } else {
-            reject(new Error('Upload failed: ' + xhr.statusText));
-          }
-        };
-
-        xhr.onerror = () => reject(new Error('Upload error'));
-
-        xhr.send(formData);
-      });
-    } catch (err) {
-      uploadOutput.textContent = err.message;
-    } finally {
-      uploadBtn.disabled = false;
-    }
-  };
-
-  getUrlBtn.onclick = async () => {
-    const cid = cidInput.value.trim();
-    if (!cid) {
-      signedUrlOutput.textContent = 'Please enter a CID.';
-      return;
-    }
-    getUrlBtn.disabled = true;
-    signedUrlOutput.textContent = '';
-
-    try {
-      const res = await fetch(`${API_URL}/signed-url`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ cid, expiresInSeconds: 3600 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to get signed URL');
-
-      signedUrlOutput.innerHTML = `
-        <p><b>Signed URL (valid 1 hour):</b></p>
-        <a href="${data.signedUrl}" target="_blank">${data.signedUrl}</a>
-      `;
-    } catch (err) {
-      signedUrlOutput.textContent = err.message;
-    } finally {
-      getUrlBtn.disabled = false;
-    }
-  };
-</script>
+    document.getElementById('uploadBtn').onclick = async () => {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) return alert('Pick a file first');
+      try {
+        const cid = await sdk.uploadFile(file);
+        alert('Uploaded! CID: ' + cid);
+      } catch(e) {
+        alert('Upload failed');
+      }
+    };
+  </script>
 </body>
 </html>
